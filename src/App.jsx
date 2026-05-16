@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, Plus, Trash2, Calendar, BookOpen, Sparkles, Star, Flame, Volume2, X, Target, FileText, Heart, Award, Plane, AlertCircle } from 'lucide-react';
+import { Check, Plus, Trash2, Calendar, BookOpen, Sparkles, Star, Flame, Volume2, X, Target, FileText, Heart, Award, Plane, AlertCircle, Moon } from 'lucide-react';
 
 // ============ VOCABULARIO PRINCIPAL ============
 const VOCAB = [
@@ -192,7 +192,403 @@ const LOGROS = [
   { id: 'quiz_maestro', titulo: 'クイズ王', romaji: 'quiz ou', es: 'Rey del quiz', desc: 'Acierta 10 quizzes', emoji: '🏆', check: (s) => s.quizCorrect >= 10 },
   { id: 'sakura', titulo: '桜咲く', romaji: 'sakura saku', es: 'Florece el sakura', desc: 'Sube al nivel 3', emoji: '🌸', check: (s) => s.xp >= 150 },
   { id: 'viajero', titulo: '旅人', romaji: 'tabibito', es: 'Viajero', desc: 'Explora todas las categorías de turismo', emoji: '🗾', check: (s) => s.turismoExplorado >= 9 },
+  { id: 'luna', titulo: '月の友', romaji: 'tsuki no tomo', es: 'Amigo de la luna', desc: 'Completa 5 quizzes nocturnos', emoji: '🌙', check: (s) => s.quizNocturnoCompletado >= 5 },
 ];
+
+// ============ ORACIONES NOCTURNAS ============
+// Cada oración tiene: emoji, traducción, kanji+kana+romaji de la oración completa,
+// y un array de 5 palabras clave para practicar.
+const ORACIONES_NOCTURNAS = [
+  {
+    emoji: '🍜',
+    es: 'Hoy quiero comer ramen',
+    jp: '今日はラーメンを食べたい',
+    kana: 'きょうはラーメンをたべたい',
+    romaji: 'kyou wa raamen wo tabetai',
+    palabras: [
+      { jp: '今日', kana: 'きょう', romaji: 'kyou', es: 'hoy' },
+      { jp: 'は', kana: 'は', romaji: 'wa', es: '(partícula tema)' },
+      { jp: 'ラーメン', kana: 'ラーメン', romaji: 'raamen', es: 'ramen' },
+      { jp: 'を', kana: 'を', romaji: 'wo', es: '(partícula objeto)' },
+      { jp: '食べたい', kana: 'たべたい', romaji: 'tabetai', es: 'quiero comer' },
+    ],
+  },
+  {
+    emoji: '☕',
+    es: 'Por la mañana bebo café',
+    jp: '朝にコーヒーを飲みます',
+    kana: 'あさにコーヒーをのみます',
+    romaji: 'asa ni koohii wo nomimasu',
+    palabras: [
+      { jp: '朝', kana: 'あさ', romaji: 'asa', es: 'mañana' },
+      { jp: 'に', kana: 'に', romaji: 'ni', es: 'en (tiempo)' },
+      { jp: 'コーヒー', kana: 'コーヒー', romaji: 'koohii', es: 'café' },
+      { jp: 'を', kana: 'を', romaji: 'wo', es: '(partícula objeto)' },
+      { jp: '飲みます', kana: 'のみます', romaji: 'nomimasu', es: 'beber (formal)' },
+    ],
+  },
+  {
+    emoji: '🚆',
+    es: 'Voy a la estación de tren',
+    jp: '駅に行きます',
+    kana: 'えきにいきます',
+    romaji: 'eki ni ikimasu',
+    palabras: [
+      { jp: '駅', kana: 'えき', romaji: 'eki', es: 'estación' },
+      { jp: 'に', kana: 'に', romaji: 'ni', es: 'a (dirección)' },
+      { jp: '行きます', kana: 'いきます', romaji: 'ikimasu', es: 'voy / ir' },
+      { jp: '電車', kana: 'でんしゃ', romaji: 'densha', es: 'tren' },
+      { jp: '時間', kana: 'じかん', romaji: 'jikan', es: 'tiempo / hora' },
+    ],
+  },
+  {
+    emoji: '😴',
+    es: 'Estoy muy cansado hoy',
+    jp: '今日はとても疲れた',
+    kana: 'きょうはとてもつかれた',
+    romaji: 'kyou wa totemo tsukareta',
+    palabras: [
+      { jp: '今日', kana: 'きょう', romaji: 'kyou', es: 'hoy' },
+      { jp: 'は', kana: 'は', romaji: 'wa', es: '(partícula tema)' },
+      { jp: 'とても', kana: 'とても', romaji: 'totemo', es: 'muy' },
+      { jp: '疲れた', kana: 'つかれた', romaji: 'tsukareta', es: 'cansado' },
+      { jp: '休む', kana: 'やすむ', romaji: 'yasumu', es: 'descansar' },
+    ],
+  },
+  {
+    emoji: '🌧️',
+    es: 'Mañana va a llover',
+    jp: '明日は雨が降ります',
+    kana: 'あしたはあめがふります',
+    romaji: 'ashita wa ame ga furimasu',
+    palabras: [
+      { jp: '明日', kana: 'あした', romaji: 'ashita', es: 'mañana (día)' },
+      { jp: 'は', kana: 'は', romaji: 'wa', es: '(partícula tema)' },
+      { jp: '雨', kana: 'あめ', romaji: 'ame', es: 'lluvia' },
+      { jp: 'が', kana: 'が', romaji: 'ga', es: '(partícula sujeto)' },
+      { jp: '降ります', kana: 'ふります', romaji: 'furimasu', es: 'caer / llover' },
+    ],
+  },
+  {
+    emoji: '🏠',
+    es: 'Voy a mi casa ahora',
+    jp: '今家に帰ります',
+    kana: 'いまいえにかえります',
+    romaji: 'ima ie ni kaerimasu',
+    palabras: [
+      { jp: '今', kana: 'いま', romaji: 'ima', es: 'ahora' },
+      { jp: '家', kana: 'いえ', romaji: 'ie', es: 'casa' },
+      { jp: 'に', kana: 'に', romaji: 'ni', es: 'a (dirección)' },
+      { jp: '帰ります', kana: 'かえります', romaji: 'kaerimasu', es: 'regresar' },
+      { jp: 'すぐ', kana: 'すぐ', romaji: 'sugu', es: 'pronto / ya' },
+    ],
+  },
+  {
+    emoji: '📚',
+    es: 'Estudio japonés todos los días',
+    jp: '毎日日本語を勉強します',
+    kana: 'まいにちにほんごをべんきょうします',
+    romaji: 'mainichi nihongo wo benkyou shimasu',
+    palabras: [
+      { jp: '毎日', kana: 'まいにち', romaji: 'mainichi', es: 'todos los días' },
+      { jp: '日本語', kana: 'にほんご', romaji: 'nihongo', es: 'idioma japonés' },
+      { jp: 'を', kana: 'を', romaji: 'wo', es: '(partícula objeto)' },
+      { jp: '勉強', kana: 'べんきょう', romaji: 'benkyou', es: 'estudio' },
+      { jp: 'します', kana: 'します', romaji: 'shimasu', es: 'hacer (formal)' },
+    ],
+  },
+  {
+    emoji: '🍣',
+    es: 'El sushi está muy delicioso',
+    jp: 'お寿司はとても美味しいです',
+    kana: 'おすしはとてもおいしいです',
+    romaji: 'osushi wa totemo oishii desu',
+    palabras: [
+      { jp: 'お寿司', kana: 'おすし', romaji: 'osushi', es: 'sushi' },
+      { jp: 'は', kana: 'は', romaji: 'wa', es: '(partícula tema)' },
+      { jp: 'とても', kana: 'とても', romaji: 'totemo', es: 'muy' },
+      { jp: '美味しい', kana: 'おいしい', romaji: 'oishii', es: 'delicioso' },
+      { jp: 'です', kana: 'です', romaji: 'desu', es: 'es (formal)' },
+    ],
+  },
+  {
+    emoji: '👫',
+    es: 'Voy con un amigo al parque',
+    jp: '友達と公園に行きます',
+    kana: 'ともだちとこうえんにいきます',
+    romaji: 'tomodachi to kouen ni ikimasu',
+    palabras: [
+      { jp: '友達', kana: 'ともだち', romaji: 'tomodachi', es: 'amigo' },
+      { jp: 'と', kana: 'と', romaji: 'to', es: 'con' },
+      { jp: '公園', kana: 'こうえん', romaji: 'kouen', es: 'parque' },
+      { jp: 'に', kana: 'に', romaji: 'ni', es: 'a (dirección)' },
+      { jp: '行きます', kana: 'いきます', romaji: 'ikimasu', es: 'ir' },
+    ],
+  },
+  {
+    emoji: '🌸',
+    es: 'Las flores de cerezo son hermosas',
+    jp: '桜の花は綺麗です',
+    kana: 'さくらのはなはきれいです',
+    romaji: 'sakura no hana wa kirei desu',
+    palabras: [
+      { jp: '桜', kana: 'さくら', romaji: 'sakura', es: 'cerezo' },
+      { jp: 'の', kana: 'の', romaji: 'no', es: 'de (posesivo)' },
+      { jp: '花', kana: 'はな', romaji: 'hana', es: 'flor' },
+      { jp: '綺麗', kana: 'きれい', romaji: 'kirei', es: 'hermoso' },
+      { jp: 'です', kana: 'です', romaji: 'desu', es: 'es (formal)' },
+    ],
+  },
+  {
+    emoji: '💼',
+    es: 'Hoy tengo mucho trabajo',
+    jp: '今日は仕事がたくさんあります',
+    kana: 'きょうはしごとがたくさんあります',
+    romaji: 'kyou wa shigoto ga takusan arimasu',
+    palabras: [
+      { jp: '今日', kana: 'きょう', romaji: 'kyou', es: 'hoy' },
+      { jp: '仕事', kana: 'しごと', romaji: 'shigoto', es: 'trabajo' },
+      { jp: 'たくさん', kana: 'たくさん', romaji: 'takusan', es: 'mucho' },
+      { jp: 'あります', kana: 'あります', romaji: 'arimasu', es: 'hay / tener' },
+      { jp: '忙しい', kana: 'いそがしい', romaji: 'isogashii', es: 'ocupado' },
+    ],
+  },
+  {
+    emoji: '🎵',
+    es: 'Me gusta escuchar música',
+    jp: '音楽を聴くのが好きです',
+    kana: 'おんがくをきくのがすきです',
+    romaji: 'ongaku wo kiku no ga suki desu',
+    palabras: [
+      { jp: '音楽', kana: 'おんがく', romaji: 'ongaku', es: 'música' },
+      { jp: '聴く', kana: 'きく', romaji: 'kiku', es: 'escuchar' },
+      { jp: 'の', kana: 'の', romaji: 'no', es: '(nominalizador)' },
+      { jp: '好き', kana: 'すき', romaji: 'suki', es: 'gustar' },
+      { jp: 'です', kana: 'です', romaji: 'desu', es: 'es (formal)' },
+    ],
+  },
+  {
+    emoji: '🐱',
+    es: 'Tengo un gato muy lindo',
+    jp: 'とても可愛い猫がいます',
+    kana: 'とてもかわいいねこがいます',
+    romaji: 'totemo kawaii neko ga imasu',
+    palabras: [
+      { jp: 'とても', kana: 'とても', romaji: 'totemo', es: 'muy' },
+      { jp: '可愛い', kana: 'かわいい', romaji: 'kawaii', es: 'lindo' },
+      { jp: '猫', kana: 'ねこ', romaji: 'neko', es: 'gato' },
+      { jp: 'が', kana: 'が', romaji: 'ga', es: '(partícula sujeto)' },
+      { jp: 'います', kana: 'います', romaji: 'imasu', es: 'hay (animado)' },
+    ],
+  },
+  {
+    emoji: '🌙',
+    es: 'Esta noche la luna es hermosa',
+    jp: '今夜は月が綺麗です',
+    kana: 'こんやはつきがきれいです',
+    romaji: 'konya wa tsuki ga kirei desu',
+    palabras: [
+      { jp: '今夜', kana: 'こんや', romaji: 'konya', es: 'esta noche' },
+      { jp: '月', kana: 'つき', romaji: 'tsuki', es: 'luna' },
+      { jp: 'が', kana: 'が', romaji: 'ga', es: '(partícula sujeto)' },
+      { jp: '綺麗', kana: 'きれい', romaji: 'kirei', es: 'hermoso' },
+      { jp: 'です', kana: 'です', romaji: 'desu', es: 'es (formal)' },
+    ],
+  },
+  {
+    emoji: '🛒',
+    es: 'Voy de compras al supermercado',
+    jp: 'スーパーに買い物に行きます',
+    kana: 'スーパーにかいものにいきます',
+    romaji: 'suupaa ni kaimono ni ikimasu',
+    palabras: [
+      { jp: 'スーパー', kana: 'スーパー', romaji: 'suupaa', es: 'supermercado' },
+      { jp: '買い物', kana: 'かいもの', romaji: 'kaimono', es: 'compras' },
+      { jp: 'に', kana: 'に', romaji: 'ni', es: 'a (propósito)' },
+      { jp: '行きます', kana: 'いきます', romaji: 'ikimasu', es: 'ir' },
+      { jp: '一緒', kana: 'いっしょ', romaji: 'issho', es: 'juntos' },
+    ],
+  },
+  {
+    emoji: '📖',
+    es: 'Leo un libro interesante',
+    jp: '面白い本を読みます',
+    kana: 'おもしろいほんをよみます',
+    romaji: 'omoshiroi hon wo yomimasu',
+    palabras: [
+      { jp: '面白い', kana: 'おもしろい', romaji: 'omoshiroi', es: 'interesante' },
+      { jp: '本', kana: 'ほん', romaji: 'hon', es: 'libro' },
+      { jp: 'を', kana: 'を', romaji: 'wo', es: '(partícula objeto)' },
+      { jp: '読みます', kana: 'よみます', romaji: 'yomimasu', es: 'leer' },
+      { jp: '物語', kana: 'ものがたり', romaji: 'monogatari', es: 'historia' },
+    ],
+  },
+  {
+    emoji: '🏃',
+    es: 'Corro en el parque por la mañana',
+    jp: '朝公園で走ります',
+    kana: 'あさこうえんではしります',
+    romaji: 'asa kouen de hashirimasu',
+    palabras: [
+      { jp: '朝', kana: 'あさ', romaji: 'asa', es: 'mañana' },
+      { jp: '公園', kana: 'こうえん', romaji: 'kouen', es: 'parque' },
+      { jp: 'で', kana: 'で', romaji: 'de', es: 'en (lugar)' },
+      { jp: '走ります', kana: 'はしります', romaji: 'hashirimasu', es: 'correr' },
+      { jp: '運動', kana: 'うんどう', romaji: 'undou', es: 'ejercicio' },
+    ],
+  },
+  {
+    emoji: '🍰',
+    es: 'El pastel está muy dulce',
+    jp: 'ケーキはとても甘いです',
+    kana: 'ケーキはとてもあまいです',
+    romaji: 'keeki wa totemo amai desu',
+    palabras: [
+      { jp: 'ケーキ', kana: 'ケーキ', romaji: 'keeki', es: 'pastel' },
+      { jp: 'は', kana: 'は', romaji: 'wa', es: '(partícula tema)' },
+      { jp: 'とても', kana: 'とても', romaji: 'totemo', es: 'muy' },
+      { jp: '甘い', kana: 'あまい', romaji: 'amai', es: 'dulce' },
+      { jp: 'です', kana: 'です', romaji: 'desu', es: 'es (formal)' },
+    ],
+  },
+  {
+    emoji: '📱',
+    es: 'Uso mucho el teléfono',
+    jp: '電話をたくさん使います',
+    kana: 'でんわをたくさんつかいます',
+    romaji: 'denwa wo takusan tsukaimasu',
+    palabras: [
+      { jp: '電話', kana: 'でんわ', romaji: 'denwa', es: 'teléfono' },
+      { jp: 'を', kana: 'を', romaji: 'wo', es: '(partícula objeto)' },
+      { jp: 'たくさん', kana: 'たくさん', romaji: 'takusan', es: 'mucho' },
+      { jp: '使います', kana: 'つかいます', romaji: 'tsukaimasu', es: 'usar' },
+      { jp: 'メッセージ', kana: 'メッセージ', romaji: 'messeeji', es: 'mensaje' },
+    ],
+  },
+  {
+    emoji: '🥗',
+    es: 'Como verduras saludables',
+    jp: '健康な野菜を食べます',
+    kana: 'けんこうなやさいをたべます',
+    romaji: 'kenkou na yasai wo tabemasu',
+    palabras: [
+      { jp: '健康', kana: 'けんこう', romaji: 'kenkou', es: 'salud' },
+      { jp: '野菜', kana: 'やさい', romaji: 'yasai', es: 'verduras' },
+      { jp: 'を', kana: 'を', romaji: 'wo', es: '(partícula objeto)' },
+      { jp: '食べます', kana: 'たべます', romaji: 'tabemasu', es: 'comer' },
+      { jp: '美味しい', kana: 'おいしい', romaji: 'oishii', es: 'delicioso' },
+    ],
+  },
+];
+
+// ============ DICCIONARIO ESPAÑOL → JAPONÉS ============
+// Para auto-detectar palabras en tareas y mostrar su equivalente al lado.
+const DICCIONARIO_ES_JP = {
+  // Acciones cotidianas
+  'comer': { jp: '食べる', romaji: 'taberu' },
+  'beber': { jp: '飲む', romaji: 'nomu' },
+  'leer': { jp: '読む', romaji: 'yomu' },
+  'escribir': { jp: '書く', romaji: 'kaku' },
+  'estudiar': { jp: '勉強する', romaji: 'benkyou suru' },
+  'trabajar': { jp: '働く', romaji: 'hataraku' },
+  'dormir': { jp: '寝る', romaji: 'neru' },
+  'descansar': { jp: '休む', romaji: 'yasumu' },
+  'correr': { jp: '走る', romaji: 'hashiru' },
+  'caminar': { jp: '歩く', romaji: 'aruku' },
+  'hablar': { jp: '話す', romaji: 'hanasu' },
+  'escuchar': { jp: '聴く', romaji: 'kiku' },
+  'ver': { jp: '見る', romaji: 'miru' },
+  'mirar': { jp: '見る', romaji: 'miru' },
+  'comprar': { jp: '買う', romaji: 'kau' },
+  'cocinar': { jp: '料理する', romaji: 'ryouri suru' },
+  'limpiar': { jp: '掃除する', romaji: 'souji suru' },
+  'lavar': { jp: '洗う', romaji: 'arau' },
+  'ir': { jp: '行く', romaji: 'iku' },
+  'venir': { jp: '来る', romaji: 'kuru' },
+  'meditar': { jp: '瞑想する', romaji: 'meisou suru' },
+  'practicar': { jp: '練習する', romaji: 'renshuu suru' },
+  'jugar': { jp: '遊ぶ', romaji: 'asobu' },
+  // Cosas
+  'agua': { jp: '水', romaji: 'mizu' },
+  'café': { jp: 'コーヒー', romaji: 'koohii' },
+  'cafe': { jp: 'コーヒー', romaji: 'koohii' },
+  'té': { jp: 'お茶', romaji: 'ocha' },
+  'te': { jp: 'お茶', romaji: 'ocha' },
+  'libro': { jp: '本', romaji: 'hon' },
+  'libros': { jp: '本', romaji: 'hon' },
+  'comida': { jp: '食べ物', romaji: 'tabemono' },
+  'desayuno': { jp: '朝ごはん', romaji: 'asagohan' },
+  'almuerzo': { jp: '昼ごはん', romaji: 'hirugohan' },
+  'cena': { jp: '夕ごはん', romaji: 'yuugohan' },
+  'arroz': { jp: 'ご飯', romaji: 'gohan' },
+  'pan': { jp: 'パン', romaji: 'pan' },
+  'leche': { jp: '牛乳', romaji: 'gyuunyuu' },
+  'fruta': { jp: '果物', romaji: 'kudamono' },
+  'frutas': { jp: '果物', romaji: 'kudamono' },
+  'música': { jp: '音楽', romaji: 'ongaku' },
+  'musica': { jp: '音楽', romaji: 'ongaku' },
+  'película': { jp: '映画', romaji: 'eiga' },
+  'pelicula': { jp: '映画', romaji: 'eiga' },
+  'teléfono': { jp: '電話', romaji: 'denwa' },
+  'telefono': { jp: '電話', romaji: 'denwa' },
+  'celular': { jp: '携帯', romaji: 'keitai' },
+  'tarea': { jp: '宿題', romaji: 'shukudai' },
+  'tareas': { jp: '宿題', romaji: 'shukudai' },
+  'ejercicio': { jp: '運動', romaji: 'undou' },
+  'gimnasio': { jp: 'ジム', romaji: 'jimu' },
+  // Lugares
+  'casa': { jp: '家', romaji: 'ie' },
+  'escuela': { jp: '学校', romaji: 'gakkou' },
+  'oficina': { jp: 'オフィス', romaji: 'ofisu' },
+  'trabajo': { jp: '仕事', romaji: 'shigoto' },
+  'parque': { jp: '公園', romaji: 'kouen' },
+  'tienda': { jp: '店', romaji: 'mise' },
+  'supermercado': { jp: 'スーパー', romaji: 'suupaa' },
+  'restaurante': { jp: 'レストラン', romaji: 'resutoran' },
+  'banco': { jp: '銀行', romaji: 'ginkou' },
+  'hospital': { jp: '病院', romaji: 'byouin' },
+  // Tiempo
+  'hoy': { jp: '今日', romaji: 'kyou' },
+  'mañana': { jp: '明日', romaji: 'ashita' },
+  'manana': { jp: '明日', romaji: 'ashita' },
+  'ayer': { jp: '昨日', romaji: 'kinou' },
+  'noche': { jp: '夜', romaji: 'yoru' },
+  'tarde': { jp: '午後', romaji: 'gogo' },
+  'semana': { jp: '週', romaji: 'shuu' },
+  'mes': { jp: '月', romaji: 'tsuki' },
+  'año': { jp: '年', romaji: 'toshi' },
+  'ano': { jp: '年', romaji: 'toshi' },
+  // Personas
+  'amigo': { jp: '友達', romaji: 'tomodachi' },
+  'amiga': { jp: '友達', romaji: 'tomodachi' },
+  'amigos': { jp: '友達', romaji: 'tomodachi' },
+  'familia': { jp: '家族', romaji: 'kazoku' },
+  'madre': { jp: '母', romaji: 'haha' },
+  'padre': { jp: '父', romaji: 'chichi' },
+  'mamá': { jp: 'お母さん', romaji: 'okaasan' },
+  'mama': { jp: 'お母さん', romaji: 'okaasan' },
+  'papá': { jp: 'お父さん', romaji: 'otousan' },
+  'papa': { jp: 'お父さん', romaji: 'otousan' },
+  // Idiomas/materias
+  'japonés': { jp: '日本語', romaji: 'nihongo' },
+  'japones': { jp: '日本語', romaji: 'nihongo' },
+  'inglés': { jp: '英語', romaji: 'eigo' },
+  'ingles': { jp: '英語', romaji: 'eigo' },
+  'español': { jp: 'スペイン語', romaji: 'supeingo' },
+  'espanol': { jp: 'スペイン語', romaji: 'supeingo' },
+  // Adjetivos
+  'feliz': { jp: '嬉しい', romaji: 'ureshii' },
+  'triste': { jp: '悲しい', romaji: 'kanashii' },
+  'cansado': { jp: '疲れた', romaji: 'tsukareta' },
+  'ocupado': { jp: '忙しい', romaji: 'isogashii' },
+  // Otros
+  'reunión': { jp: '会議', romaji: 'kaigi' },
+  'reunion': { jp: '会議', romaji: 'kaigi' },
+  'clase': { jp: '授業', romaji: 'jugyou' },
+  'examen': { jp: '試験', romaji: 'shiken' },
+  'dinero': { jp: 'お金', romaji: 'okane' },
+  'tiempo': { jp: '時間', romaji: 'jikan' },
+};
 
 const KITSUNE_MSGS = {
   manana: ['¡Buenos días! ¿Comenzamos el día con energía? ☀️', '¡おはよう! El sol brilla solo para ti', 'Un nuevo día, una nueva oportunidad de crecer 🌱'],
@@ -306,6 +702,8 @@ export default function NihongoOrganizer() {
   const [showAudioTip, setShowAudioTip] = useState(false);
   const [categoriaTurismo, setCategoriaTurismo] = useState('esenciales');
   const [turismoExplorado, setTurismoExplorado] = useState([]);
+  const [quizNocturno, setQuizNocturno] = useState(null);
+  const [quizNocturnoCompletado, setQuizNocturnoCompletado] = useState(0);
   const intervalRef = useRef(null);
 
   const hora = new Date().getHours();
@@ -337,7 +735,7 @@ export default function NihongoOrganizer() {
 
   useEffect(() => {
     try {
-      const keys = ['tareas','habitos','notas','eventos','xp','palabras','pomodorosHoy','pomodorosTotal','logros','quizCorrect','turismoExplorado'];
+      const keys = ['tareas','habitos','notas','eventos','xp','palabras','pomodorosHoy','pomodorosTotal','logros','quizCorrect','turismoExplorado','quizNocturnoCompletado'];
       for (const k of keys) {
         try {
           const raw = localStorage.getItem('nihongo_' + k);
@@ -354,6 +752,7 @@ export default function NihongoOrganizer() {
             if (k === 'logros') setLogrosDesbloqueados(v);
             if (k === 'quizCorrect') setQuizCorrect(v);
             if (k === 'turismoExplorado') setTurismoExplorado(v);
+            if (k === 'quizNocturnoCompletado') setQuizNocturnoCompletado(v);
           }
         } catch (e) {}
       }
@@ -390,6 +789,7 @@ export default function NihongoOrganizer() {
   useEffect(() => { if(loaded) save('logros', logrosDesbloqueados); }, [logrosDesbloqueados, loaded]);
   useEffect(() => { if(loaded) save('quizCorrect', quizCorrect); }, [quizCorrect, loaded]);
   useEffect(() => { if(loaded) save('turismoExplorado', turismoExplorado); }, [turismoExplorado, loaded]);
+  useEffect(() => { if(loaded) save('quizNocturnoCompletado', quizNocturnoCompletado); }, [quizNocturnoCompletado, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -398,6 +798,7 @@ export default function NihongoOrganizer() {
       tareasComp: tareas.filter(t=>t.hecho).length, palabras: palabrasAprendidas.length,
       pomodoros: pomodorosTotal, habitoMax, quizCorrect, xp,
       turismoExplorado: turismoExplorado.length,
+      quizNocturnoCompletado,
     };
     LOGROS.forEach(logro => {
       if (!logrosDesbloqueados.includes(logro.id) && logro.check(stats)) {
@@ -594,6 +995,90 @@ export default function NihongoOrganizer() {
       ganarXP(5, `Categoría desbloqueada: ${TURISMO[cat].titulo}`);
     }
   };
+
+  // ============ DETECTOR DE PALABRAS EN ESPAÑOL → JAPONÉS ============
+  // Busca en el texto de la tarea palabras conocidas y devuelve las traducciones.
+  const detectarPalabrasJP = (texto) => {
+    if (!texto) return [];
+    const palabras = texto.toLowerCase()
+      .replace(/[.,;:!?¡¿()"]/g, '')
+      .split(/\s+/);
+    const encontradas = [];
+    const yaVistas = new Set();
+    for (const p of palabras) {
+      if (DICCIONARIO_ES_JP[p] && !yaVistas.has(p)) {
+        encontradas.push({ es: p, ...DICCIONARIO_ES_JP[p] });
+        yaVistas.add(p);
+      }
+    }
+    return encontradas;
+  };
+
+  // ============ QUIZ NOCTURNO ============
+  const iniciarQuizNocturno = () => {
+    // Selecciona una oración del día (basada en la fecha para consistencia)
+    const hoy = new Date().toDateString();
+    const seed = hoy.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+    const oracion = ORACIONES_NOCTURNAS[seed % ORACIONES_NOCTURNAS.length];
+    setQuizNocturno({
+      oracion,
+      paso: 'intro', // intro -> aprender -> quiz -> final
+      indicePalabra: 0,
+      respuestas: [],
+      respuesta: '',
+      mostrarRespuesta: false,
+    });
+  };
+
+  const avanzarQuizNocturno = () => {
+    if (!quizNocturno) return;
+    if (quizNocturno.paso === 'intro') {
+      setQuizNocturno({ ...quizNocturno, paso: 'aprender', indicePalabra: 0 });
+    } else if (quizNocturno.paso === 'aprender') {
+      if (quizNocturno.indicePalabra < quizNocturno.oracion.palabras.length - 1) {
+        setQuizNocturno({ ...quizNocturno, indicePalabra: quizNocturno.indicePalabra + 1 });
+      } else {
+        setQuizNocturno({ ...quizNocturno, paso: 'quiz', indicePalabra: 0, respuesta: '', mostrarRespuesta: false });
+      }
+    }
+  };
+
+  const responderQuizNocturno = () => {
+    if (!quizNocturno) return;
+    const palabraActual = quizNocturno.oracion.palabras[quizNocturno.indicePalabra];
+    const resp = quizNocturno.respuesta.trim().toLowerCase();
+    const correcto = resp === palabraActual.romaji.toLowerCase() || 
+                     resp === palabraActual.es.toLowerCase() ||
+                     resp === palabraActual.kana;
+    const nuevasResp = [...quizNocturno.respuestas, { palabra: palabraActual, correcto, resp }];
+    setQuizNocturno({ ...quizNocturno, mostrarRespuesta: true, respuestas: nuevasResp });
+    if (correcto) {
+      ganarXP(5, `¡${palabraActual.jp} correcto!`);
+    } else {
+      playDing(400);
+    }
+  };
+
+  const siguientePalabraQuiz = () => {
+    if (!quizNocturno) return;
+    if (quizNocturno.indicePalabra < quizNocturno.oracion.palabras.length - 1) {
+      setQuizNocturno({
+        ...quizNocturno,
+        indicePalabra: quizNocturno.indicePalabra + 1,
+        respuesta: '',
+        mostrarRespuesta: false,
+      });
+    } else {
+      setQuizNocturno({ ...quizNocturno, paso: 'final' });
+      const correctas = quizNocturno.respuestas.filter(r => r.correcto).length;
+      const bonusXP = 30 + correctas * 10;
+      ganarXP(bonusXP, `¡Quiz nocturno completado! ${correctas}/5 correctas`);
+      setQuizNocturnoCompletado(q => q + 1);
+      playLevelUp();
+    }
+  };
+
+  const cerrarQuizNocturno = () => setQuizNocturno(null);
 
   const hoy = new Date().toDateString();
   const habitosHoy = habitos.filter(h => h.dias[hoy]).length;
@@ -875,6 +1360,7 @@ export default function NihongoOrganizer() {
             {id:'calendario', label:'Eventos', icon:Calendar},
             {id:'focus', label:'Focus', icon:Target},
             {id:'turismo', label:'Turismo', icon:Plane},
+            {id:'nocturno', label:'Quiz Nocturno', icon:Moon},
             {id:'diccionario', label:'Diccionario', icon:BookOpen},
             {id:'logros', label:'Logros', icon:Award},
           ].map(t => {
@@ -989,6 +1475,15 @@ export default function NihongoOrganizer() {
                 <span>¡Quiz rápido! +25 XP</span>
                 <Sparkles className="w-6 h-6"/>
               </button>
+
+              <button onClick={() => { setTab('nocturno'); }} 
+                className="w-full p-5 rounded-2xl text-white font-bold hover:scale-[1.02] transition-transform flex items-center justify-center gap-3 shadow-lg" style={{
+                  background: 'linear-gradient(135deg, #1a1a2e, #4a3a6e, #6e5a9e)',
+                }}>
+                <Moon className="w-6 h-6"/>
+                <span>🌙 Quiz Nocturno · Aprende una oración</span>
+                <Sparkles className="w-6 h-6" style={{color:'#ffd700'}}/>
+              </button>
             </div>
           )}
 
@@ -1033,6 +1528,27 @@ export default function NihongoOrganizer() {
                     </button>
                     <div className="flex-1">
                       <div className={t.hecho ? 'line-through opacity-60' : ''} style={{color:'#5c2a3a'}}>{t.texto}</div>
+                      {(() => {
+                        const palabrasDetectadas = detectarPalabrasJP(t.texto);
+                        if (palabrasDetectadas.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {palabrasDetectadas.map((p, idx) => (
+                              <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs" style={{
+                                background: 'linear-gradient(135deg, #e8eaf6, #c5cae9)',
+                                border: '1px solid #6e5a9e40',
+                              }}>
+                                <span className="italic" style={{color:'#4a3a6e'}}>{p.es}:</span>
+                                <span className="font-bold" style={{fontFamily:'"Noto Sans JP", sans-serif', color:'#2c1810'}}>{p.jp}</span>
+                                <span className="italic" style={{color:'#6e5a9e'}}>({p.romaji})</span>
+                                <button onClick={(e) => { e.stopPropagation(); speak(p.jp, `tjp-${t.id}-${idx}`); }} className="hover:scale-110">
+                                  <Volume2 className="w-3 h-3" style={{color:'#6e5a9e'}}/>
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       <div className="text-xs flex items-center gap-2 mt-1 flex-wrap" style={{color:'#a0556e'}}>
                         <span>{t.palabra.emoji}</span>
                         <span className="font-bold" style={{fontFamily:'"Noto Sans JP", sans-serif', color:'#ff8fa3'}}>{t.palabra.jp}</span>
@@ -1325,6 +1841,317 @@ export default function NihongoOrganizer() {
                   </div>
                 );
               })()}
+            </div>
+          )}
+
+          {tab === 'nocturno' && (
+            <div>
+              <div className="mb-5 text-center">
+                <div className="inline-block px-4 py-2 rounded-full text-xs tracking-widest mb-3" style={{
+                  background: 'linear-gradient(135deg, #4a3a6e, #6e5a9e)', color: 'white',
+                }}>
+                  🌙 夜の勉強 · ESTUDIO NOCTURNO
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{color:'#5c2a3a'}}>Quiz Nocturno</h2>
+                <p className="text-sm italic" style={{color:'#a0556e'}}>
+                  Aprende una oración completa: kanji, hiragana y romaji de cada palabra
+                </p>
+              </div>
+
+              <div className="mb-4 p-4 rounded-2xl flex items-center justify-between gap-3" style={{
+                background: 'linear-gradient(135deg, #e8eaf6, #c5cae9)',
+                border: '2px solid #6e5a9e40',
+              }}>
+                <div>
+                  <div className="text-xs tracking-widest" style={{color:'#4a3a6e'}}>🏆 RACHA</div>
+                  <div className="text-lg font-bold" style={{color:'#2c1810'}}>
+                    {quizNocturnoCompletado} {quizNocturnoCompletado === 1 ? 'quiz completado' : 'quizzes completados'}
+                  </div>
+                </div>
+                <Moon className="w-10 h-10" style={{color:'#6e5a9e'}}/>
+              </div>
+
+              {!quizNocturno ? (
+                <div className="text-center py-8 rounded-3xl" style={{
+                  background: 'linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)',
+                  border: '2px solid #6e5a9e',
+                }}>
+                  <div className="text-7xl mb-4" style={{filter: 'drop-shadow(0 0 20px #ffd700)'}}>🌙</div>
+                  <h3 className="text-2xl font-bold mb-2 text-white">¿Listo para aprender?</h3>
+                  <p className="text-sm mb-6 px-4" style={{color:'#c5cae9'}}>
+                    Cada noche una oración cotidiana diferente.<br/>
+                    Aprenderás 5 palabras con sus kanji, hiragana y romaji.
+                  </p>
+                  <button onClick={iniciarQuizNocturno} 
+                    className="px-8 py-3 rounded-2xl font-bold shadow-2xl hover:scale-105 transition-transform" style={{
+                      background: 'linear-gradient(135deg, #ffd700, #ff8fa3)',
+                      color: 'white',
+                    }}>
+                    ✨ Comenzar quiz · +30 XP
+                  </button>
+                  <p className="text-xs mt-4 italic" style={{color:'#c5cae9'}}>
+                    Bonus de +10 XP por cada respuesta correcta
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* INTRO: muestra la oración del día */}
+                  {quizNocturno.paso === 'intro' && (
+                    <div className="rounded-3xl p-6 text-center" style={{
+                      background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                      border: '2px solid #6e5a9e',
+                    }}>
+                      <div className="text-6xl mb-3">{quizNocturno.oracion.emoji}</div>
+                      <div className="text-xs tracking-widest mb-2" style={{color:'#c5cae9'}}>ORACIÓN DE ESTA NOCHE</div>
+                      <div className="text-3xl md:text-4xl font-bold mb-3" style={{fontFamily:'"Noto Sans JP", sans-serif', color:'white'}}>
+                        {quizNocturno.oracion.jp}
+                      </div>
+                      <div className="text-base italic mb-2" style={{color:'#c5cae9'}}>{quizNocturno.oracion.kana}</div>
+                      <div className="text-sm italic mb-2" style={{color:'#ffd700'}}>{quizNocturno.oracion.romaji}</div>
+                      <div className="text-lg font-medium mb-5 text-white">"{quizNocturno.oracion.es}"</div>
+                      <button onClick={() => speak(quizNocturno.oracion.jp, 'oracion')}
+                        className="mb-5 px-4 py-2 rounded-full text-xs hover:scale-105 transition-transform inline-flex items-center gap-2" style={{
+                          background: '#6e5a9e', color: 'white',
+                        }}>
+                        <Volume2 className="w-4 h-4"/> Escuchar oración
+                      </button>
+                      <div className="text-xs mb-4" style={{color:'#c5cae9'}}>
+                        Vamos a aprender las {quizNocturno.oracion.palabras.length} palabras una por una
+                      </div>
+                      <button onClick={avanzarQuizNocturno}
+                        className="px-8 py-3 rounded-2xl font-bold shadow-lg hover:scale-105 transition-transform" style={{
+                          background: 'linear-gradient(135deg, #ffd700, #ff8fa3)', color: 'white',
+                        }}>
+                        Empezar a aprender →
+                      </button>
+                    </div>
+                  )}
+
+                  {/* APRENDER: muestra cada palabra para estudiar */}
+                  {quizNocturno.paso === 'aprender' && (() => {
+                    const palabra = quizNocturno.oracion.palabras[quizNocturno.indicePalabra];
+                    return (
+                      <div className="rounded-3xl p-6" style={{
+                        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                        border: '2px solid #6e5a9e',
+                      }}>
+                        <div className="text-center mb-4">
+                          <div className="text-xs tracking-widest mb-2" style={{color:'#c5cae9'}}>
+                            PALABRA {quizNocturno.indicePalabra + 1} DE {quizNocturno.oracion.palabras.length}
+                          </div>
+                          <div className="w-full h-2 rounded-full overflow-hidden mb-4" style={{background:'rgba(255,255,255,0.1)'}}>
+                            <div className="h-full rounded-full transition-all" style={{
+                              width: `${((quizNocturno.indicePalabra + 1) / quizNocturno.oracion.palabras.length) * 100}%`,
+                              background: 'linear-gradient(90deg, #ffd700, #ff8fa3)',
+                            }}/>
+                          </div>
+                        </div>
+
+                        <div className="text-center mb-6 p-6 rounded-2xl" style={{background:'rgba(255,255,255,0.05)'}}>
+                          <div className="text-xs tracking-widest mb-2" style={{color:'#ffd700'}}>漢字 KANJI</div>
+                          <div className="text-7xl md:text-8xl font-bold mb-4" style={{fontFamily:'"Noto Sans JP", sans-serif', color:'white'}}>
+                            {palabra.jp}
+                          </div>
+                          
+                          <div className="text-xs tracking-widest mb-1" style={{color:'#c5cae9'}}>かな HIRAGANA/KATAKANA</div>
+                          <div className="text-3xl mb-3" style={{fontFamily:'"Noto Sans JP", sans-serif', color:'#c5cae9'}}>
+                            {palabra.kana}
+                          </div>
+                          
+                          <div className="text-xs tracking-widest mb-1" style={{color:'#ffd700'}}>ROMAJI</div>
+                          <div className="text-xl italic mb-3" style={{color:'#ffd700'}}>{palabra.romaji}</div>
+                          
+                          <div className="text-xs tracking-widest mb-1" style={{color:'#c5cae9'}}>SIGNIFICADO</div>
+                          <div className="text-lg font-medium text-white">{palabra.es}</div>
+                          
+                          <button onClick={() => speak(palabra.jp, `apr-${quizNocturno.indicePalabra}`)}
+                            className="mt-4 px-4 py-2 rounded-full text-xs hover:scale-105 transition-transform inline-flex items-center gap-2" style={{
+                              background: '#6e5a9e', color: 'white',
+                            }}>
+                            <Volume2 className="w-4 h-4"/> Escuchar
+                          </button>
+                        </div>
+
+                        <button onClick={avanzarQuizNocturno}
+                          className="w-full px-6 py-3 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-transform" style={{
+                            background: 'linear-gradient(135deg, #ffd700, #ff8fa3)', color: 'white',
+                          }}>
+                          {quizNocturno.indicePalabra < quizNocturno.oracion.palabras.length - 1 
+                            ? 'Siguiente palabra →' 
+                            : '¡A practicar! →'}
+                        </button>
+                      </div>
+                    );
+                  })()}
+
+                  {/* QUIZ: pregunta cada palabra */}
+                  {quizNocturno.paso === 'quiz' && (() => {
+                    const palabra = quizNocturno.oracion.palabras[quizNocturno.indicePalabra];
+                    const ultimaResp = quizNocturno.respuestas[quizNocturno.respuestas.length - 1];
+                    return (
+                      <div className="rounded-3xl p-6" style={{
+                        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                        border: '2px solid #6e5a9e',
+                      }}>
+                        <div className="text-center mb-4">
+                          <div className="text-xs tracking-widest mb-2" style={{color:'#ffd700'}}>
+                            QUIZ {quizNocturno.indicePalabra + 1} DE {quizNocturno.oracion.palabras.length}
+                          </div>
+                          <div className="w-full h-2 rounded-full overflow-hidden mb-4" style={{background:'rgba(255,255,255,0.1)'}}>
+                            <div className="h-full rounded-full transition-all" style={{
+                              width: `${((quizNocturno.indicePalabra + 1) / quizNocturno.oracion.palabras.length) * 100}%`,
+                              background: 'linear-gradient(90deg, #ffd700, #ff8fa3)',
+                            }}/>
+                          </div>
+                        </div>
+
+                        <div className="text-center mb-5 p-6 rounded-2xl" style={{background:'rgba(255,255,255,0.05)'}}>
+                          <div className="text-7xl md:text-8xl font-bold mb-3" style={{fontFamily:'"Noto Sans JP", sans-serif', color:'white'}}>
+                            {palabra.jp}
+                          </div>
+                          <button onClick={() => speak(palabra.jp, `q-${quizNocturno.indicePalabra}`)}
+                            className="px-3 py-1 rounded-full text-xs inline-flex items-center gap-1" style={{
+                              background: '#6e5a9e', color: 'white',
+                            }}>
+                            <Volume2 className="w-3 h-3"/> Escuchar
+                          </button>
+                        </div>
+
+                        {!quizNocturno.mostrarRespuesta ? (
+                          <>
+                            <div className="text-sm text-center mb-3" style={{color:'#c5cae9'}}>
+                              ¿Cómo se pronuncia o qué significa?
+                            </div>
+                            <input type="text" value={quizNocturno.respuesta}
+                              onChange={(e) => setQuizNocturno({...quizNocturno, respuesta: e.target.value})}
+                              onKeyDown={(e) => e.key === 'Enter' && responderQuizNocturno()}
+                              placeholder="Escribe en romaji o español..."
+                              autoFocus
+                              className="w-full px-4 py-3 rounded-2xl outline-none mb-3 text-center text-lg"
+                              style={{
+                                background: 'rgba(255,255,255,0.1)',
+                                border: '2px solid #6e5a9e',
+                                color: 'white',
+                              }}/>
+                            <button onClick={responderQuizNocturno}
+                              disabled={!quizNocturno.respuesta.trim()}
+                              className="w-full px-6 py-3 rounded-2xl font-bold disabled:opacity-50" style={{
+                                background: 'linear-gradient(135deg, #ffd700, #ff8fa3)', color: 'white',
+                              }}>
+                              Comprobar
+                            </button>
+                            <div className="text-xs text-center mt-3" style={{color:'#c5cae9'}}>
+                              💡 Acepta el romaji ({palabra.romaji.length} letras), la escritura kana o el significado en español
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className={`p-4 rounded-2xl mb-4 text-center ${ultimaResp.correcto ? '' : ''}`} style={{
+                              background: ultimaResp.correcto ? 'linear-gradient(135deg, #4caf50, #66bb6a)' : 'linear-gradient(135deg, #f44336, #ef5350)',
+                              color: 'white',
+                            }}>
+                              <div className="text-3xl mb-2">{ultimaResp.correcto ? '✅' : '❌'}</div>
+                              <div className="font-bold text-lg mb-2">
+                                {ultimaResp.correcto ? '¡Correcto!' : '¡Casi!'}
+                              </div>
+                              <div className="text-sm">
+                                <strong style={{fontFamily:'"Noto Sans JP", sans-serif', fontSize:'18px'}}>{palabra.jp}</strong>
+                                {' = '}{palabra.romaji} = {palabra.es}
+                              </div>
+                              <div className="text-xs italic mt-1 opacity-90">kana: {palabra.kana}</div>
+                            </div>
+                            <button onClick={siguientePalabraQuiz}
+                              className="w-full px-6 py-3 rounded-2xl font-bold shadow-lg" style={{
+                                background: 'linear-gradient(135deg, #ffd700, #ff8fa3)', color: 'white',
+                              }}>
+                              {quizNocturno.indicePalabra < quizNocturno.oracion.palabras.length - 1 
+                                ? 'Siguiente palabra →' 
+                                : 'Ver resultado final →'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* FINAL: resumen + oración completa */}
+                  {quizNocturno.paso === 'final' && (() => {
+                    const correctas = quizNocturno.respuestas.filter(r => r.correcto).length;
+                    const total = quizNocturno.oracion.palabras.length;
+                    return (
+                      <div className="rounded-3xl p-6" style={{
+                        background: 'linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)',
+                        border: '2px solid #ffd700',
+                      }}>
+                        <div className="text-center mb-5">
+                          <div className="text-6xl mb-2">{correctas === total ? '🏆' : correctas >= 3 ? '🌟' : '🌙'}</div>
+                          <h3 className="text-2xl font-bold text-white mb-1">
+                            {correctas === total ? '¡Perfecto!' : correctas >= 3 ? '¡Muy bien!' : '¡Buen intento!'}
+                          </h3>
+                          <div className="text-3xl font-bold" style={{color:'#ffd700'}}>
+                            {correctas} / {total}
+                          </div>
+                          <div className="text-sm mt-1" style={{color:'#c5cae9'}}>+{30 + correctas * 10} XP ganados</div>
+                        </div>
+
+                        <div className="mb-5 p-5 rounded-2xl text-center" style={{background:'rgba(255,215,0,0.1)', border:'1px solid #ffd700'}}>
+                          <div className="text-xs tracking-widest mb-3" style={{color:'#ffd700'}}>LA ORACIÓN QUE APRENDISTE</div>
+                          <div className="text-3xl md:text-4xl font-bold mb-2" style={{fontFamily:'"Noto Sans JP", sans-serif', color:'white'}}>
+                            {quizNocturno.oracion.jp}
+                          </div>
+                          <div className="text-sm italic mb-1" style={{color:'#c5cae9'}}>{quizNocturno.oracion.kana}</div>
+                          <div className="text-sm italic mb-2" style={{color:'#ffd700'}}>{quizNocturno.oracion.romaji}</div>
+                          <div className="text-base text-white">"{quizNocturno.oracion.es}"</div>
+                          <button onClick={() => speak(quizNocturno.oracion.jp, 'final')}
+                            className="mt-3 px-4 py-2 rounded-full text-xs inline-flex items-center gap-2" style={{
+                              background: '#6e5a9e', color: 'white',
+                            }}>
+                            <Volume2 className="w-4 h-4"/> Escuchar oración completa
+                          </button>
+                        </div>
+
+                        <div className="mb-5">
+                          <div className="text-xs tracking-widest mb-2" style={{color:'#c5cae9'}}>RESUMEN DE PALABRAS</div>
+                          <div className="space-y-2">
+                            {quizNocturno.respuestas.map((r, i) => (
+                              <div key={i} className="flex items-center gap-3 p-2 rounded-xl" style={{
+                                background: 'rgba(255,255,255,0.05)',
+                              }}>
+                                <span className="text-xl">{r.correcto ? '✅' : '❌'}</span>
+                                <div className="flex-1">
+                                  <span className="text-lg font-bold" style={{fontFamily:'"Noto Sans JP", sans-serif', color:'white'}}>
+                                    {r.palabra.jp}
+                                  </span>
+                                  <span className="text-xs ml-2" style={{color:'#c5cae9'}}>
+                                    {r.palabra.romaji} · {r.palabra.es}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button onClick={cerrarQuizNocturno}
+                          className="w-full px-6 py-3 rounded-2xl font-bold" style={{
+                            background: 'linear-gradient(135deg, #ffd700, #ff8fa3)', color: 'white',
+                          }}>
+                          ✨ Terminar
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+
+              {!quizNocturno && (
+                <div className="mt-5 p-4 rounded-2xl text-xs" style={{
+                  background: 'linear-gradient(135deg, #fff5e0, #ffefc8)',
+                  border: '2px dashed #ffd700',
+                  color: '#8b4513',
+                }}>
+                  💡 <strong>Tip:</strong> La oración cambia cada día. Completa 5 quizzes para desbloquear el logro <strong>月の友 (Amigo de la luna)</strong>
+                </div>
+              )}
             </div>
           )}
 
